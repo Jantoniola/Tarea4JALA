@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/guiaMundos"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white_transparent"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <ImageView
+        android:id="@+id/marcador"
+        style="@style/marcador"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+
+    <TextView
+        android:id="@+id/textoguia"
+        style="@style/botonguia"
+        android:layout_marginStart="16dp"
+        android:text="@string/texto_guia_mundos"
+        app:layout_constraintBottom_toTopOf="@+id/marcador"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <android.widget.Button
+        android:id="@+id/exit_guide"
+        style="@style/exit_guide"
+        android:text="@string/exit_guide"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <android.widget.Button
+        android:id="@+id/avanzar"
+        style="@style/avanzar"
+        android:text="@string/siguiente"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    <android.widget.Button
+        android:id="@+id/atras"
+        style="@style/avanzar"
+        android:text="@string/atras"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

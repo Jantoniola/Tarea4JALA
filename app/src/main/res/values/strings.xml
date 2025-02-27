@@ -18,5 +18,11 @@
     <string name="atras">Atrás</string>
     <string name="texto_guia_mundos">Aquí podrás navegar a través de los mundos de Spyro</string>
     <string name="texto_guia_coleccionables">Aquí encontraras los elementos coleccionables que podremos encontrar en el universo de Spyro</string>
+    <string name="cerrar">Cerrar</string>
+    <string name="resumen">Resumen</string>
+    <string name="textoResumen">- Se ha visto cómo acceder a la pestaña de <b>Personajes</b>.\n\n- Hemos aprendido cómo acceder a la pestaña <b>Mundos</b>, donde veremos todos los mundos disponibles.\n\n- Hemos llegado a la pestaña de los <b>Coleccionables</b>.\n\n- Por último, hemos aprendido cómo acceder a la información de la autoría de esta aplicación.</string>
+    <string name="salir">Salir del Vídeo</string>
+    <string name="text_egg1">Vídeo Easter Egg</string>
+    <string name="easter_egg">Easter Egg</string>
 
 </resources>

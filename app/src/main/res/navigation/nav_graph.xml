@@ -44,5 +44,17 @@
             app:destination="@id/navigation_worlds"
             app:enterAnim="@anim/slide_in_left"
             app:exitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_navigation_collectibles_to_videoFragment"
+            app:destination="@id/videoFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
+    <fragment
+        android:id="@+id/videoFragment"
+        android:name="dam.pmdm.spyrothedragon.ui.VideoFragment"
+        android:label="@string/easter_egg"
+        tools:layout="@layout/fragment_video" />
 </navigation>

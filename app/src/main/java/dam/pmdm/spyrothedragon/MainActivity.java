@@ -5,17 +5,18 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.OvershootInterpolator;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.ActionBarOverlayLayout;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
@@ -28,8 +29,11 @@ import dam.pmdm.spyrothedragon.databinding.GuiaInformacionBinding;
 import dam.pmdm.spyrothedragon.databinding.GuiaMundosBinding;
 import dam.pmdm.spyrothedragon.databinding.GuiaPersonajesBinding;
 import dam.pmdm.spyrothedragon.databinding.GuiaResumenBinding;
+import dam.pmdm.spyrothedragon.databinding.FuegoBinding;
+
 
 public class MainActivity extends AppCompatActivity {
+    private FuegoBinding fuegoBinding;
     private GuiaBienvenidaBinding guiaBienvenidaBinding;
     private GuiaPersonajesBinding guiaPersonajesBinding;
     private GuiaMundosBinding guiaMundosBinding;
@@ -40,12 +44,18 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController = null;
     // Lo igualaremos a lo guardado en sharedPreferent
     private boolean needguide = true;
+    private SoundPool sonidos;
+    int avanzar, retroceder;
+    private MediaPlayer mediaPlayer;
+    private boolean puedeRetroceder = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Asignamos a las variables tipo binding creadas cada uno de los layout
         binding = ActivityMainBinding.inflate(getLayoutInflater());
+        fuegoBinding=binding.includeFuego;
         guiaBienvenidaBinding = binding.includeBienvenida;
         guiaPersonajesBinding = binding.includePersonajes;
         guiaMundosBinding = binding.includeMundos;
@@ -69,7 +79,8 @@ public class MainActivity extends AppCompatActivity {
         navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
             if (destination.getId() == R.id.navigation_characters ||
                     destination.getId() == R.id.navigation_worlds ||
-                    destination.getId() == R.id.navigation_collectibles) {
+                    destination.getId() == R.id.navigation_collectibles ||
+                    destination.getId() == R.id.videoFragment) {
                 // Para las pantallas de los tabs, no queremos que aparezca la flecha de atrás
                 getSupportActionBar().setDisplayHomeAsUpEnabled(false);
             } else {
@@ -78,14 +89,67 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Si no se ha visto la guia antes (SharePreferent) visualiza la guia
-        SharedPreferences sharedPreferences = getSharedPreferences("Preferencias", MODE_PRIVATE);
-        needguide = sharedPreferences.getBoolean("guide", true);
-        if (needguide) {
-            inicializaBotones();
-            visualizalaguia();
-        }
 
+        /*
+        En el caso de que entremos en la guia, debemos desactivar la posibilidad de que se retroceda
+        con el botón de retroceso ya que cuando se hace, actúa sobre la aplicacion
+        principal y no actúa sobre las acciones y animaciones que tenemos en la guia.
+        Debemos volver a activarla al salir de la guia.
+        Como está la bandera inicializada a true, si no entramos en la guia tenemos por defecto el botón
+        de retroceso activo.
+         */
+
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (puedeRetroceder) {
+                    // Si el botón de retroceder está habilitado, permite el comportamiento predeterminado
+                    setEnabled(false); // Desactiva el callback temporalmente
+                    MainActivity.super.onBackPressed(); // Llama al comportamiento predeterminado
+                } else {
+                    // Si está desactivado, no hace nada
+                }
+            }
+        };
+
+        // Registrar el callback en el dispatcher
+        getOnBackPressedDispatcher().addCallback(this, callback);
+
+        // savedInstanceState será null al iniciar la aplicación, pero tendrá datos en el caso de que paso por aquí al girar el movil, por ejemplo
+        // De lo contrario en el caso de girar el móvil, iniciaría la guía o al menos comprobaría si debe hacerlo.
+        if (savedInstanceState == null) {
+            // Si no se ha visto la guia antes (SharePreferent) visualiza la guia
+            SharedPreferences sharedPreferences = getSharedPreferences("Preferencias", MODE_PRIVATE);
+            needguide = sharedPreferences.getBoolean("guide", true);
+            if (needguide) {
+                puedeRetroceder = false;
+                //Cargamos y reproducimos la cancion de Spyro de forma cíclica
+                mediaPlayer = MediaPlayer.create(this, R.raw.cancionspyro);
+                mediaPlayer.setLooping(true);
+                mediaPlayer.start();
+
+                // Cargamos dentro de la SoundPool los sonidos que asignaremos a los botones de avanzar y retroceder
+                sonidos = new SoundPool.Builder().setMaxStreams(2).build();
+                avanzar = sonidos.load(this, R.raw.avanzar, 1);
+                retroceder = sonidos.load(this, R.raw.atras, 1);
+
+                // Esperamos hasta que estén cargados los sonidos. Cuando lo estén continuamos con la guia
+                sonidos.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+                    @Override
+                    public void onLoadComplete(SoundPool soundPool, int i, int i1) {
+                        if (i1 == 0) {
+
+                            // Creamos todos los listener para no crearlos más de una vez al avanzar y retroceder en la guia
+                            inicializaBotones();
+
+                            // Visualizamos la guia.
+                            visualizalaguia();
+                        }
+                    }
+                });
+
+            }
+        }
     }
 
     private void inicializaBotones() {
@@ -105,17 +169,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
     private void visualizalaguia() {
         guiaBienvenidaBinding.guiaBienvenida.setVisibility(View.VISIBLE);
+
     }
 
     private void entrarGuia(View view) {
+        if (sonidos != null) {
+            sonidos.play(avanzar, 1f, 1f, 0, 0, 1f);
+        }
         guiaBienvenidaBinding.guiaBienvenida.setVisibility(View.GONE);
         pantallaPersonajes();
     }
 
+    // Aquí entramos en al pantalla de personajes con su animación correspondiente
     private void pantallaPersonajes() {
         guiaPersonajesBinding.guiaPersonajes.setVisibility(View.VISIBLE);
 
@@ -147,13 +214,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    private void irInformacion(View view) {
-    }
-    private void irMundos(View view) {
 
+    // Entramos en la parte de la guia en la que mostramos la ventana de Acerca de...
+    private void irInformacion(View view) {
+        if (sonidos != null) {
+            sonidos.play(avanzar, 1f, 1f, 0, 0, 1f);
+        }
+    }
+
+    // Entramos en la parte de la guia en la que enseñamos la pestaña Mundos
+    private void irMundos(View view) {
+        if (sonidos != null) {
+            sonidos.play(avanzar, 1f, 1f, 0, 0, 1f);
+        }
         ObjectAnimator desplazarsigu = ObjectAnimator.ofFloat(guiaPersonajesBinding.avanzar, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator fadeOut = ObjectAnimator.ofFloat(guiaPersonajesBinding.textoguia, "alpha", 1f, 0f);
-        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaPersonajesBinding.marcador, "translationX", 0, (binding.navView.getWidth() / 3)-78f);
+        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaPersonajesBinding.marcador, "translationX", 0, (binding.navView.getWidth() / 3) - 78f);
         AnimatorSet animatorSet1 = new AnimatorSet();
         animatorSet1
                 .play(fadeOut)
@@ -172,18 +248,22 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
+
+    //Pulsamos el botón de Volver desde Coleccionables
     private void volverMundos(View view) {
+        if (sonidos != null) {
+            sonidos.play(retroceder, 1f, 1f, 0, 0, 1f);
+        }
         ObjectAnimator desplazarsigu = ObjectAnimator.ofFloat(guiaColeccionablesBinding.avanzar, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator desplazarAtr = ObjectAnimator.ofFloat(guiaColeccionablesBinding.atras, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator fadeOut = ObjectAnimator.ofFloat(guiaColeccionablesBinding.textoguia, "alpha", 1f, 0f);
-        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaColeccionablesBinding.marcador, "translationX", 0, (binding.navView.getWidth() / -3)+78f);
+        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaColeccionablesBinding.marcador, "translationX", 0, (binding.navView.getWidth() / -3) + 78f);
         AnimatorSet animatorSet1 = new AnimatorSet();
         animatorSet1
                 .play(fadeOut)
                 .with(desplazarsigu)
                 .with(desplazarAtr)
                 .before(desplazar);
-        //animatorSet1.setInterpolator(new OvershootInterpolator());
         animatorSet1.setDuration(1000);
         animatorSet1.start();
         animatorSet1.addListener(new AnimatorListenerAdapter() {
@@ -196,13 +276,23 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    // Volvemos desde la pantalla de la guia que muestra el Acerca de
     private void volverColeccionables(View view) {
+        if (sonidos != null) {
+            sonidos.play(retroceder, 1f, 1f, 0, 0, 1f);
+        }
     }
+
+    // Vamos a la pantalla de la guia que explica la pestaña de Personajes
     private void irPersonajes(View view) {
+        if (sonidos != null) {
+            sonidos.play(retroceder, 1f, 1f, 0, 0, 1f);
+        }
         ObjectAnimator desplazarsigu = ObjectAnimator.ofFloat(guiaMundosBinding.avanzar, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator desplazarAtr = ObjectAnimator.ofFloat(guiaMundosBinding.atras, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator fadeOut = ObjectAnimator.ofFloat(guiaMundosBinding.textoguia, "alpha", 1f, 0f);
-        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaMundosBinding.marcador, "translationX", 0,binding.navView.getWidth() / -3f);
+        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaMundosBinding.marcador, "translationX", 0, binding.navView.getWidth() / -3f);
         AnimatorSet animatorSet1 = new AnimatorSet();
         animatorSet1
                 .play(fadeOut)
@@ -225,11 +315,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Pulsamos el botón de avanzar en la pantalla de la guia Mundos para que avance hasta coleccionables
     private void irColeccionables(View view) {
+        if (sonidos != null) {
+            sonidos.play(avanzar, 1f, 1f, 0, 0, 1f);
+        }
         ObjectAnimator desplazarsigu = ObjectAnimator.ofFloat(guiaMundosBinding.avanzar, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator desplazarAtr = ObjectAnimator.ofFloat(guiaMundosBinding.atras, "translationY", binding.navHostFragment.getHeight() / 2f, 0);
         ObjectAnimator fadeOut = ObjectAnimator.ofFloat(guiaMundosBinding.textoguia, "alpha", 1f, 0f);
-        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaMundosBinding.marcador, "translationX", 0,binding.navView.getWidth() / 3f);
+        ObjectAnimator desplazar = ObjectAnimator.ofFloat(guiaMundosBinding.marcador, "translationX", 0, binding.navView.getWidth() / 3f);
         AnimatorSet animatorSet1 = new AnimatorSet();
         animatorSet1
                 .play(fadeOut)
@@ -250,6 +344,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Entramos en la pantalla coleccionables
     private void pantallaColeccionables() {
 
         guiaColeccionablesBinding.guiaColeccionables.setVisibility(View.VISIBLE);
@@ -282,6 +377,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Entramos en la parte de la guia que explica la pestaña de Mundos
     private void pantallaMundos() {
         guiaMundosBinding.guiaMundos.setVisibility(View.VISIBLE);
         ObjectAnimator fadeIn = ObjectAnimator.ofFloat(guiaMundosBinding.textoguia, "alpha", 0f, 1f);
@@ -313,6 +409,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    // Salimos de la guia
+    // Escribimos en los SharedPreferent para que no vuelva a mostrarse la guia
+    // Liberamos el MediaPlayer.
+    // Después de reproducir el último sonido liberamos también el SoundPool
     private void salirguia(View view) {
         SharedPreferences sharedPreferences = getSharedPreferences("Preferencias", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -322,15 +422,26 @@ public class MainActivity extends AppCompatActivity {
         //Ponemos el primer elemento del menu
         selectedBottomMenu(binding.navView.getMenu().getItem(0));
 
+        if (sonidos != null) {
+            sonidos.play(retroceder, 1f, 1f, 0, 0, 1f);
+            sonidos.release();
+        }
+
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+        }
 
         // escondemos la guia sea cual sea la pantalla visualizada
-
         guiaBienvenidaBinding.guiaBienvenida.setVisibility(View.GONE);
         guiaPersonajesBinding.guiaPersonajes.setVisibility(View.GONE);
         guiaMundosBinding.guiaMundos.setVisibility(View.GONE);
         guiaColeccionablesBinding.guiaColeccionables.setVisibility(View.GONE);
         guiaInformacionBinding.guiaInformacion.setVisibility(View.GONE);
-        guiaResumenBinding.guiarResumen.setVisibility(View.GONE);
+        guiaResumenBinding.guiaResumen.setVisibility(View.GONE);
+
+        // Volvemos a activar el botón de retroceso
+
+        puedeRetroceder = true;
 
 
     }
@@ -371,6 +482,16 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.accept, null)
                 .show();
     }
+public void visualizaFuego(int x, int y){
+        fuegoBinding.fuegoId.reiniciar(x,y);
+        fuegoBinding.layoutFuego.setVisibility(View.VISIBLE);
+        fuegoBinding.layoutFuego.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                fuegoBinding.layoutFuego.setVisibility(View.GONE);
+            }
+        });
 
+}
 
 }

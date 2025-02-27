@@ -58,4 +58,7 @@
     <include
         android:id="@+id/includeResumen"
         layout="@layout/guia_resumen" />
+    <include
+        android:id="@+id/includeFuego"
+        layout="@layout/fuego" />
 </RelativeLayout>

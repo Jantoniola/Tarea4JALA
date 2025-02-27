@@ -39,7 +39,7 @@ public class CharactersFragment extends Fragment {
         recyclerView = binding.recyclerViewCharacters;
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         charactersList = new ArrayList<>();
-        adapter = new CharactersAdapter(charactersList);
+        adapter = new CharactersAdapter(charactersList,requireActivity());
         recyclerView.setAdapter(adapter);
 
         // Cargamos los personajes desde el XML
